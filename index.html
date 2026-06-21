@@ -1,0 +1,2674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0078d7" />
+<!-- iOS: allow "Add to Home Screen" to launch full-screen like an app -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="My Bookmarks" />
+<!-- PWA: installable + offline (active only when served over http/https) -->
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+<title>My Bookmarks</title>
+<!--
+  My Bookmarks — a self-contained, hierarchical bookmark manager.
+  - No backend, no build tools, no external dependencies.
+  - Plain HTML + embedded CSS + embedded vanilla JavaScript.
+  - Data is persisted in the browser's localStorage.
+  Open this file directly in any modern browser to use it.
+-->
+<style>
+  /* ============================================================
+     THEME & GLOBAL TOKENS
+     ============================================================ */
+  :root {
+    --bg: #eaeaea;
+    --bg-grad-1: #ededed;
+    --bg-grad-2: #e2e2e2;
+    --bloom-1: rgba(0, 120, 215, 0.07);
+    --bloom-2: rgba(0, 120, 215, 0.05);
+    --bloom-3: rgba(0, 120, 215, 0.06);
+    --surface: #ffffff;
+    --surface-2: #f2f2f2;
+    --border: #d6d6d6;
+    --border-strong: #b9b9b9;
+    --text: #1b1b1b;
+    --text-muted: #5f5f5f;
+    --primary: #0078d7;
+    --primary-hover: #005a9e;
+    --primary-soft: #e3f0fb;
+    --accent: #0078d7;
+    --danger: #e81123;
+    --danger-hover: #c50f1f;
+    --danger-soft: #fde7e9;
+    --success: #107c10;
+    --success-soft: #e5f2e5;
+    --warning: #ca5010;
+    --shadow-sm: none;
+    --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.20);
+    --radius: 0px;
+    --radius-sm: 0px;
+    --font: "Segoe UI", "Segoe UI Variable", -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1f1f1f;
+      --bg-grad-1: #232323;
+      --bg-grad-2: #1a1a1a;
+      --bloom-1: rgba(60, 160, 255, 0.10);
+      --bloom-2: rgba(60, 160, 255, 0.06);
+      --bloom-3: rgba(60, 160, 255, 0.08);
+      --surface: #2b2b2b;
+      --surface-2: #333333;
+      --border: #3f3f3f;
+      --border-strong: #555555;
+      --text: #f3f3f3;
+      --text-muted: #b0b0b0;
+      --primary: #4cc2ff;
+      --primary-hover: #76ccff;
+      --primary-soft: #1d3344;
+      --accent: #4cc2ff;
+      --danger: #ff6b74;
+      --danger-hover: #ff9298;
+      --danger-soft: #3a1c1f;
+      --success: #6ccb5f;
+      --success-soft: #1d2e1b;
+      --warning: #f7a35c;
+      --shadow-sm: none;
+      --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.5);
+      --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+      --radius: 0px;
+      --radius-sm: 0px;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: var(--font);
+    background-color: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    letter-spacing: 0;
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    min-height: 100vh;
+  }
+
+  /* ============================================================
+     LAYOUT
+     ============================================================ */
+  .app-header {
+    background: var(--surface);
+    border-bottom: 2px solid var(--primary);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .app-header__top {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 14px 18px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    font-weight: 600;
+    font-size: 1.18rem;
+    letter-spacing: 0;
+    margin-right: auto;
+  }
+
+  .brand__logo {
+    width: 34px;
+    height: 34px;
+    border-radius: 0;
+    background: var(--primary);
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  /* Inline SVG icons (Metro line style) */
+  .ic {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    stroke: currentColor;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    display: inline-block;
+    vertical-align: -3px;
+  }
+  .ic--sm { width: 15px; height: 15px; }
+  .ic--lg { width: 20px; height: 20px; }
+  .ic--xl { width: 46px; height: 46px; stroke-width: 1.4; }
+
+  /* Tab bar */
+  .tabbar {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 12px;
+    display: flex;
+    gap: 2px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .tabbar::-webkit-scrollbar { height: 6px; }
+  .tabbar::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+
+  .tab {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.92rem;
+    padding: 12px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+    transition: color .15s, border-color .15s, background .15s;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border-radius: 0;
+  }
+
+  .tab:hover { color: var(--text); background: var(--surface-2); }
+
+  .tab.is-active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+
+  .tab.is-admin { margin-left: auto; }
+
+  .tab__icon { font-size: 1rem; }
+
+  /* Main content */
+  main {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 24px 18px 90px;
+  }
+
+  /* ============================================================
+     BUTTONS
+     ============================================================ */
+  .btn {
+    appearance: none;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 9px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background .15s, border-color .15s, transform .05s, box-shadow .15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    line-height: 1.2;
+  }
+  .btn:hover { background: var(--surface-2); border-color: var(--border-strong); }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+  .btn--primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+  }
+  .btn--primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+
+  .btn--danger {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+  }
+  .btn--danger:hover { background: var(--danger-hover); border-color: var(--danger-hover); }
+
+  .btn--ghost {
+    background: transparent;
+    border-color: transparent;
+  }
+  .btn--ghost:hover { background: var(--surface-2); }
+
+  .btn--sm {
+    padding: 5px 10px;
+    font-size: 0.82rem;
+  }
+
+  .btn--icon {
+    padding: 6px 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 6px;
+  }
+  .btn--icon:hover { background: var(--surface-2); color: var(--text); }
+
+  /* Share menu */
+  .share-sub {
+    margin: 0 0 16px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    word-break: break-word;
+  }
+  .share-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .share-btn {
+    appearance: none;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 16px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transition: background .15s, border-color .15s;
+  }
+  .share-btn:hover { background: var(--surface-2); border-color: var(--primary); }
+  .share-btn .ic { width: 24px; height: 24px; }
+  .share-ico { width: 26px; height: 26px; flex-shrink: 0; }
+  .share-btn--wa { color: #25D366; border-color: #25D366; }
+  .share-btn--wa:hover { background: rgba(37,211,102,0.10); border-color: #25D366; }
+  .share-btn--wa span { color: var(--text); }
+
+  /* WhatsApp header button */
+  .btn--wa {
+    background: #25D366;
+    border-color: #25D366;
+    color: #fff;
+  }
+  .btn--wa:hover { background: #1eb558; border-color: #1eb558; }
+  .btn--wa .share-ico { width: 17px; height: 17px; }
+  .btn--primary .share-ico, .btn--wa .share-ico { color: #fff; }
+
+  /* Contact pick (event form) */
+  .contact-pick {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .contact-pick__label { font-size: 0.78rem; color: var(--text-muted); margin-right: 2px; }
+  .contact-tag {
+    appearance: none;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 5px 9px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .contact-tag:hover { border-color: var(--primary); background: var(--surface-2); }
+  .contact-tag.is-added { border-color: var(--success); color: var(--success); background: var(--success-soft); }
+  .contact-tag .ic { width: 13px; height: 13px; }
+
+  /* Recipient pick list (WhatsApp compose) */
+  .pick-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    max-height: 240px;
+    overflow-y: auto;
+  }
+  .pick-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 11px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+  }
+  .pick-row:last-child { border-bottom: none; }
+  .pick-row:hover { background: var(--surface-2); }
+  .pick-row input { width: 17px; height: 17px; flex-shrink: 0; accent-color: var(--primary); }
+  .pick-row__name { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pick-row__meta { font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
+
+  /* WhatsApp send queue */
+  .queue-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .queue-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+  }
+  .queue-row.is-sent { opacity: 0.6; }
+  .queue-row .pick-row__name { flex: 1; }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+
+  .toolbar__title {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-right: auto;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+  }
+  .toolbar__title span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ============================================================
+     BOOKMARK TREE
+     ============================================================ */
+  .tree { display: flex; flex-direction: column; gap: 6px; }
+
+  .node { }
+
+  .node__row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 11px 13px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border-strong);
+    border-radius: 0;
+    box-shadow: var(--shadow-sm);
+    transition: border-color .15s, background .15s;
+  }
+  .node__row:hover { border-color: var(--primary); border-left-color: var(--primary); background: var(--surface-2); }
+
+  .node__toggle {
+    appearance: none;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--text-muted);
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    border-radius: 5px;
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    transition: transform .15s, background .15s;
+  }
+  .node__toggle:hover { background: var(--surface-2); color: var(--text); }
+  .node__toggle.is-open { transform: rotate(90deg); }
+  .node__toggle.is-leaf { visibility: hidden; }
+
+  .node__favicon {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    object-fit: cover;
+    background: var(--surface-2);
+  }
+
+  .node__folder-icon { font-size: 1.05rem; flex-shrink: 0; }
+
+  .node__link {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.94rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+  .node__link:hover { color: var(--primary); text-decoration: underline; }
+
+  .node__label {
+    font-weight: 600;
+    font-size: 0.94rem;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .node__badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 1px 7px;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+
+  .node__actions {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  .node__row:hover .node__actions,
+  .node__row:focus-within .node__actions { opacity: 1; }
+  @media (hover: none) { .node__actions { opacity: 1; } }
+
+  .node__children {
+    margin-left: 19px;
+    padding-left: 15px;
+    border-left: 2px solid var(--border);
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  /* ============================================================
+     CARDS / ADMIN
+     ============================================================ */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .card__title {
+    margin: 0 0 14px;
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+
+  .list { display: flex; flex-direction: column; gap: 8px; }
+
+  .list-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+  }
+  .list-item__name {
+    font-weight: 600;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .list-item__meta { font-size: 0.78rem; color: var(--text-muted); }
+
+  /* ============================================================
+     FORMS
+     ============================================================ */
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+
+  .field label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+
+  .field .hint {
+    font-weight: 400;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+  }
+
+  input[type="text"],
+  input[type="url"],
+  input[type="date"],
+  input[type="time"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  select {
+    width: 100%;
+    font: inherit;
+    font-size: 0.92rem;
+    padding: 10px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+  }
+  input.is-invalid, select.is-invalid, textarea.is-invalid { border-color: var(--danger); }
+
+  .field__error {
+    color: var(--danger);
+    font-size: 0.78rem;
+    margin-top: 5px;
+    display: none;
+  }
+  .field__error.is-shown { display: block; }
+
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+
+  /* ============================================================
+     MODAL
+     ============================================================ */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 16px;
+    z-index: 100;
+    overflow-y: auto;
+    animation: fade .15s ease;
+  }
+  .modal-overlay[hidden] { display: none; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 460px;
+    margin: auto;
+    animation: pop .18s ease;
+    border: 1px solid var(--border);
+  }
+
+  .modal__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal__header h2 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+  .modal__close { margin-left: auto; }
+
+  .modal__body { padding: 18px; }
+
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+
+  /* ============================================================
+     EMPTY STATES
+     ============================================================ */
+  .empty {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted);
+  }
+  .empty__icon { font-size: 2.6rem; margin-bottom: 10px; }
+  .empty__title { font-weight: 700; color: var(--text); margin-bottom: 6px; font-size: 1.05rem; }
+  .empty__text { margin-bottom: 16px; }
+
+  /* ============================================================
+     TOASTS
+     ============================================================ */
+  .toasts {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 200;
+    width: calc(100% - 32px);
+    max-width: 380px;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--text);
+    color: var(--surface);
+    padding: 11px 16px;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg);
+    font-size: 0.88rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    animation: slideup .2s ease;
+    pointer-events: auto;
+  }
+  .toast--success { background: var(--success); color: #fff; }
+  .toast--error { background: var(--danger); color: #fff; }
+  .toast--info { background: var(--primary); color: #fff; }
+  @keyframes slideup { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+  /* ============================================================
+     HEADER ACTIONS / SYNC BADGE
+     ============================================================ */
+  .header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+  .sync-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text-muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color .15s, color .15s, background .15s;
+  }
+  .sync-badge:hover { border-color: var(--border-strong); color: var(--text); }
+  .sync-badge__dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text-muted); flex-shrink: 0;
+  }
+  .sync-badge.is-on { color: var(--success); border-color: color-mix(in srgb, var(--success) 35%, var(--border)); background: var(--success-soft); }
+  .sync-badge.is-on .sync-badge__dot { background: var(--success); }
+  .sync-badge.is-syncing .sync-badge__dot { animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* Chips for attendees */
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--primary-soft); color: var(--primary);
+    border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+    padding: 3px 6px 3px 10px; border-radius: 999px;
+    font-size: 0.8rem; font-weight: 600;
+  }
+  .chip button {
+    appearance: none; border: none; background: transparent; cursor: pointer;
+    color: var(--primary); font-size: 0.9rem; line-height: 1; padding: 2px 4px; border-radius: 4px;
+  }
+  .chip button:hover { background: rgba(0,0,0,.06); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .code-hint {
+    font-family: var(--mono); font-size: 0.8rem; background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; word-break: break-all;
+  }
+  .note {
+    font-size: 0.8rem; color: var(--text-muted); background: var(--surface-2);
+    border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    padding: 10px 12px; border-radius: 8px; margin: 12px 0 0;
+  }
+
+  /* ============================================================
+     RESPONSIVE
+     ============================================================ */
+  @media (max-width: 600px) {
+    .app-header__top { padding: 12px 14px 8px; }
+    .brand { font-size: 1.05rem; }
+    main { padding: 16px 12px 80px; }
+    .toolbar__title { font-size: 1.15rem; width: 100%; }
+    .node__actions { opacity: 1; }
+    .modal-overlay { padding: 12px; align-items: flex-end; }
+    .modal { max-width: 100%; }
+    .form-actions .btn { flex: 1; }
+    .card { padding: 16px; }
+    .header-actions .btn span.label { display: none; }
+    .sync-badge .label { display: none; }
+  }
+
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-header__top">
+    <div class="brand">
+      <span class="brand__logo"><svg class="ic ic--lg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span>
+      <span>My Bookmarks</span>
+    </div>
+    <div class="header-actions">
+      <button class="sync-badge" id="syncBadge" title="Cross-device sync settings">
+        <span class="sync-badge__dot"></span><span class="label">Sync off</span>
+      </button>
+      <button class="btn btn--wa btn--sm" id="composeWaBtn" title="Compose a WhatsApp message">
+        <svg class="share-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885M20.52 3.449C18.24 1.245 15.24 0 12.045 0 5.463 0 .104 5.359.101 11.945c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.652a11.882 11.882 0 005.71 1.448h.005c6.582 0 11.946-5.359 11.949-11.945a11.821 11.821 0 00-3.48-8.4z"/></svg> <span class="label">Message</span>
+      </button>
+      <button class="btn btn--primary btn--sm" id="newEventBtn" title="Create a calendar event">
+        <svg class="ic ic--sm" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4" width="18" height="17"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="9" x2="21" y2="9"/></svg> <span class="label">New Event</span>
+      </button>
+    </div>
+  </div>
+  <!-- Tab bar is rendered dynamically -->
+  <nav class="tabbar" id="tabbar" aria-label="Bookmark tabs"></nav>
+</header>
+
+<main id="main"><!-- View rendered dynamically --></main>
+
+<!-- Modal host -->
+<div class="modal-overlay" id="modalOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal__header">
+      <h2 id="modalTitle">Title</h2>
+      <button class="btn btn--icon modal__close" id="modalClose" aria-label="Close">✕</button>
+    </div>
+    <div class="modal__body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- Toast host -->
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<!-- Hidden file input for JSON import -->
+<input type="file" id="importInput" accept="application/json,.json" class="visually-hidden" />
+
+<script>
+"use strict";
+
+/* ============================================================
+   MY BOOKMARKS — single-file hierarchical bookmark manager
+   ------------------------------------------------------------
+   Architecture overview:
+   - state                : in-memory app state (tabs + links + ui)
+   - localStorage         : persistence layer (load/save)
+   - render functions     : tabbar, bookmark tree, admin page
+   - modal/form functions : add/edit tab, add/edit link
+   - utility functions    : ids, parent/child lookup, validation,
+                            import/export JSON
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   CONSTANTS
+   ------------------------------------------------------------ */
+const STORAGE_KEY = "myBookmarks.v1";
+const ADMIN_TAB_ID = "__admin__";
+
+/* ------------------------------------------------------------
+   APP STATE
+   state.tabs : [{ id, name }]
+   state.links: [{ id, name, url, level, parentId, tabId }]
+   state.ui   : { activeTabId, collapsed: { [linkId]: true } }
+   ------------------------------------------------------------ */
+let state = {
+  tabs: [],
+  links: [],
+  contacts: [],
+  ui: { activeTabId: null, collapsed: {} },
+};
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+
+// Generate a short unique id.
+function uid(prefix = "id") {
+  return prefix + "_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+}
+
+// Escape a string for safe insertion into HTML.
+function esc(str) {
+  return String(str == null ? "" : str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Validate a URL. We accept http/https; if scheme is missing we
+// try prefixing https:// so users can type "example.com".
+function normalizeUrl(raw) {
+  const value = String(raw || "").trim();
+  if (!value) return null;
+  let candidate = value;
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(candidate)) {
+    candidate = "https://" + candidate;
+  }
+  try {
+    const u = new URL(candidate);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+    return u.href;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Get a favicon URL for a link (uses Google's public service; if
+// offline it simply fails to load and the fallback folder icon shows).
+function faviconFor(url) {
+  try {
+    const host = new URL(url).hostname;
+    return "https://www.google.com/s2/favicons?domain=" + encodeURIComponent(host) + "&sz=32";
+  } catch (e) {
+    return "";
+  }
+}
+
+/* ----- relationship helpers ----- */
+
+function getTab(tabId) {
+  return state.tabs.find((t) => t.id === tabId) || null;
+}
+
+function getLink(linkId) {
+  return state.links.find((l) => l.id === linkId) || null;
+}
+
+// Direct children of a link (or top-level links of a tab when parentId is null).
+function childrenOf(tabId, parentId) {
+  return state.links
+    .filter((l) => l.tabId === tabId && l.parentId === parentId)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// All links in a tab at a given level.
+function linksAtLevel(tabId, level) {
+  return state.links
+    .filter((l) => l.tabId === tabId && l.level === level)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// Returns true if `maybeAncestorId` is an ancestor of `linkId`
+// (used to prevent moving a node into its own subtree).
+function isAncestor(maybeAncestorId, linkId) {
+  let current = getLink(linkId);
+  while (current && current.parentId) {
+    if (current.parentId === maybeAncestorId) return true;
+    current = getLink(current.parentId);
+  }
+  return false;
+}
+
+// Collect a link and all of its descendants (depth-first).
+function collectSubtree(linkId) {
+  const result = [];
+  const stack = [linkId];
+  while (stack.length) {
+    const id = stack.pop();
+    result.push(id);
+    state.links.filter((l) => l.parentId === id).forEach((c) => stack.push(c.id));
+  }
+  return result;
+}
+
+/* ============================================================
+   PERSISTENCE (localStorage)
+   ============================================================ */
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      tabs: state.tabs,
+      links: state.links,
+      contacts: state.contacts,
+      ui: state.ui,
+    }));
+  } catch (e) {
+    toast("Could not save data: storage may be full or disabled.", "error");
+  }
+  // If cloud sync is on, push these changes up (debounced).
+  if (typeof scheduleAutoPush === "function") scheduleAutoPush();
+}
+
+function loadState() {
+  let raw = null;
+  try {
+    raw = localStorage.getItem(STORAGE_KEY);
+  } catch (e) {
+    raw = null;
+  }
+
+  if (!raw) {
+    state = seedData();
+    saveState();
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    state.tabs = Array.isArray(parsed.tabs) ? parsed.tabs : [];
+    state.links = Array.isArray(parsed.links) ? parsed.links : [];
+    state.contacts = Array.isArray(parsed.contacts) ? parsed.contacts : [];
+    state.ui = parsed.ui && typeof parsed.ui === "object"
+      ? { activeTabId: parsed.ui.activeTabId || null, collapsed: parsed.ui.collapsed || {} }
+      : { activeTabId: null, collapsed: {} };
+  } catch (e) {
+    state = seedData();
+    saveState();
+  }
+
+  // Ensure there is always a valid active tab.
+  if (!state.tabs.length) {
+    state.ui.activeTabId = ADMIN_TAB_ID;
+  } else if (
+    state.ui.activeTabId !== ADMIN_TAB_ID &&
+    !getTab(state.ui.activeTabId)
+  ) {
+    state.ui.activeTabId = state.tabs[0].id;
+  }
+}
+
+// Cross-tab sync: when another browser tab changes localStorage,
+// reload our state and re-render.
+window.addEventListener("storage", (e) => {
+  if (e.key === STORAGE_KEY) {
+    loadState();
+    render();
+    toast("Synced changes from another tab.", "info");
+  }
+});
+
+/* ============================================================
+   STARTER / SEED DATA
+   ============================================================ */
+function seedData() {
+  const coaching = { id: uid("tab"), name: "My Coaching" };
+  const projx = { id: uid("tab"), name: "My Office ProjX" };
+
+  const links = [];
+
+  // --- My Coaching examples ---
+  const driveFolder = {
+    id: uid("lnk"), name: "Coaching Drive Folder",
+    url: "https://drive.google.com", level: 0, parentId: null, tabId: coaching.id,
+  };
+  links.push(driveFolder);
+  links.push({
+    id: uid("lnk"), name: "Session Notes (XLSX)",
+    url: "https://docs.google.com/spreadsheets", level: 1, parentId: driveFolder.id, tabId: coaching.id,
+  });
+  links.push({
+    id: uid("lnk"), name: "Client Tracker (XLSX)",
+    url: "https://docs.google.com/spreadsheets", level: 1, parentId: driveFolder.id, tabId: coaching.id,
+  });
+
+  // --- My Office ProjX examples ---
+  const projDocs = {
+    id: uid("lnk"), name: "ProjX Documents",
+    url: "https://drive.google.com", level: 0, parentId: null, tabId: projx.id,
+  };
+  links.push(projDocs);
+  const specs = {
+    id: uid("lnk"), name: "Specifications",
+    url: "https://drive.google.com", level: 1, parentId: projDocs.id, tabId: projx.id,
+  };
+  links.push(specs);
+  links.push({
+    id: uid("lnk"), name: "Requirements Doc",
+    url: "https://docs.google.com/document", level: 2, parentId: specs.id, tabId: projx.id,
+  });
+  links.push({
+    id: uid("lnk"), name: "Project Board",
+    url: "https://github.com", level: 0, parentId: null, tabId: projx.id,
+  });
+
+  return {
+    tabs: [coaching, projx],
+    links: links,
+    contacts: [],
+    ui: { activeTabId: coaching.id, collapsed: {} },
+  };
+}
+
+/* ============================================================
+   TOASTS / NOTIFICATIONS
+   ============================================================ */
+function toast(message, type = "info", duration = 3000) {
+  const host = document.getElementById("toasts");
+  const el = document.createElement("div");
+  el.className = "toast toast--" + type;
+  const icon = type === "success" ? "✓" : type === "error" ? "⚠" : "ℹ";
+  el.innerHTML = '<span aria-hidden="true">' + icon + "</span><span>" + esc(message) + "</span>";
+  host.appendChild(el);
+  setTimeout(() => {
+    el.style.transition = "opacity .25s, transform .25s";
+    el.style.opacity = "0";
+    el.style.transform = "translateY(8px)";
+    setTimeout(() => el.remove(), 250);
+  }, duration);
+}
+
+/* ============================================================
+   MODAL HELPERS
+   ============================================================ */
+let modalKeyHandler = null;
+
+function openModal(title, bodyHtml, onMount) {
+  document.getElementById("modalTitle").textContent = title;
+  const body = document.getElementById("modalBody");
+  body.innerHTML = bodyHtml;
+  const overlay = document.getElementById("modalOverlay");
+  overlay.hidden = false;
+  if (typeof onMount === "function") onMount(body);
+
+  // Focus first focusable element.
+  const focusable = body.querySelector("input, select, textarea, button");
+  if (focusable) setTimeout(() => focusable.focus(), 50);
+
+  modalKeyHandler = (e) => { if (e.key === "Escape") closeModal(); };
+  document.addEventListener("keydown", modalKeyHandler);
+}
+
+function closeModal() {
+  const overlay = document.getElementById("modalOverlay");
+  overlay.hidden = true;
+  document.getElementById("modalBody").innerHTML = "";
+  if (modalKeyHandler) {
+    document.removeEventListener("keydown", modalKeyHandler);
+    modalKeyHandler = null;
+  }
+}
+
+document.getElementById("modalClose").addEventListener("click", closeModal);
+document.getElementById("modalOverlay").addEventListener("click", (e) => {
+  if (e.target.id === "modalOverlay") closeModal();
+});
+
+// Lightweight confirm dialog returning a Promise<boolean>.
+function confirmDialog(message, confirmLabel = "Delete", danger = true) {
+  return new Promise((resolve) => {
+    openModal("Please confirm", `
+      <p style="margin:0 0 18px;">${esc(message)}</p>
+      <div class="form-actions">
+        <button class="btn" id="cfgCancel">Cancel</button>
+        <button class="btn ${danger ? "btn--danger" : "btn--primary"}" id="cfgOk">${esc(confirmLabel)}</button>
+      </div>
+    `, (body) => {
+      body.querySelector("#cfgCancel").addEventListener("click", () => { closeModal(); resolve(false); });
+      body.querySelector("#cfgOk").addEventListener("click", () => { closeModal(); resolve(true); });
+    });
+  });
+}
+
+/* ============================================================
+   ICONS (inline SVG, Metro line style)
+   ============================================================ */
+const ICONS = {
+  bookmark: '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
+  calendar: '<rect x="3" y="4" width="18" height="17"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="9" x2="21" y2="9"/>',
+  folder: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  edit: '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/>',
+  trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  chevron: '<polyline points="9 18 15 12 9 6"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+  refresh: '<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>',
+  cloud: '<path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>',
+  share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>',
+  mail: '<rect x="2" y="4" width="20" height="16" rx="0"/><polyline points="2 6 12 13 22 6"/>',
+  save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>',
+  alert: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
+};
+function ico(name, cls) {
+  return '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + (ICONS[name] || '') + '</svg>';
+}
+
+// WhatsApp brand glyph (filled, uses currentColor).
+const WHATSAPP_SVG = '<svg class="share-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.149-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885M20.52 3.449C18.24 1.245 15.24 0 12.045 0 5.463 0 .104 5.359.101 11.945c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.652a11.882 11.882 0 005.71 1.448h.005c6.582 0 11.946-5.359 11.949-11.945a11.821 11.821 0 00-3.48-8.4z"/></svg>';
+
+/* ============================================================
+   RENDER: TAB BAR
+   ============================================================ */
+function renderTabbar() {
+  const bar = document.getElementById("tabbar");
+  let html = "";
+
+  state.tabs.forEach((tab) => {
+    const active = tab.id === state.ui.activeTabId ? " is-active" : "";
+    html += `<button class="tab${active}" data-tab="${esc(tab.id)}" role="tab">
+      ${ico("folder", "ic--sm")}${esc(tab.name)}
+    </button>`;
+  });
+
+  const adminActive = state.ui.activeTabId === ADMIN_TAB_ID ? " is-active" : "";
+  html += `<button class="tab is-admin${adminActive}" data-tab="${ADMIN_TAB_ID}" role="tab">
+    ${ico("settings", "ic--sm")}Manage
+  </button>`;
+
+  bar.innerHTML = html;
+
+  bar.querySelectorAll(".tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.ui.activeTabId = btn.dataset.tab;
+      saveState();
+      render();
+    });
+  });
+}
+
+/* ============================================================
+   RENDER: BOOKMARK TREE (for a normal tab)
+   ============================================================ */
+function renderTabView(tabId) {
+  const tab = getTab(tabId);
+  const main = document.getElementById("main");
+  if (!tab) { main.innerHTML = ""; return; }
+
+  const roots = childrenOf(tabId, null);
+
+  let html = `
+    <div class="toolbar">
+      <h1 class="toolbar__title">${ico("folder")} <span>${esc(tab.name)}</span></h1>
+      <button class="btn" data-act="rename-tab" data-id="${esc(tab.id)}">${ico("edit")}Rename</button>
+      <button class="btn btn--primary" data-act="add-link" data-tab="${esc(tab.id)}">${ico("plus")}Add Link</button>
+    </div>
+  `;
+
+  if (!roots.length) {
+    html += `
+      <div class="empty">
+        <div class="empty__icon">${ico("link", "ic--xl")}</div>
+        <div class="empty__title">No bookmarks yet</div>
+        <div class="empty__text">Add your first bookmark to this tab to get started.</div>
+        <button class="btn btn--primary" data-act="add-link" data-tab="${esc(tab.id)}">${ico("plus")}Add Link</button>
+      </div>`;
+  } else {
+    html += '<div class="tree">' + roots.map((l) => renderNode(l)).join("") + "</div>";
+  }
+
+  main.innerHTML = html;
+  wireTabViewEvents();
+}
+
+// Recursively render a single node and its children.
+function renderNode(link) {
+  const kids = childrenOf(link.tabId, link.id);
+  const hasKids = kids.length > 0;
+  const isCollapsed = !!state.ui.collapsed[link.id];
+
+  const toggleClass = "node__toggle" + (hasKids ? (isCollapsed ? "" : " is-open") : " is-leaf");
+  const fav = faviconFor(link.url);
+
+  const iconHtml = hasKids
+    ? `<span class="node__folder-icon" aria-hidden="true">${ico("folder")}</span>`
+    : (fav
+        ? `<img class="node__favicon" src="${esc(fav)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+        : `<span class="node__folder-icon" aria-hidden="true">${ico("link")}</span>`);
+
+  let html = `<div class="node">
+    <div class="node__row">
+      <button class="${toggleClass}" data-act="toggle" data-id="${esc(link.id)}" aria-label="Expand/collapse" ${hasKids ? "" : "tabindex=-1"}>${ico("chevron", "ic--sm")}</button>
+      ${iconHtml}
+      <a class="node__link" href="${esc(link.url)}" target="_blank" rel="noopener noreferrer" title="${esc(link.url)}">${esc(link.name)}</a>
+      ${hasKids ? `<span class="node__badge">${kids.length}</span>` : ""}
+      <div class="node__actions">
+        <button class="btn--icon" data-act="copy-link" data-id="${esc(link.id)}" title="Copy URL">${ico("link")}</button>
+        <button class="btn--icon" data-act="add-child" data-id="${esc(link.id)}" title="Add child link">${ico("plus")}</button>
+        <button class="btn--icon" data-act="edit-link" data-id="${esc(link.id)}" title="Edit">${ico("edit")}</button>
+        <button class="btn--icon" data-act="delete-link" data-id="${esc(link.id)}" title="Delete">${ico("trash")}</button>
+      </div>
+    </div>`;
+
+  if (hasKids && !isCollapsed) {
+    html += '<div class="node__children">' + kids.map((k) => renderNode(k)).join("") + "</div>";
+  }
+
+  html += "</div>";
+  return html;
+}
+
+function wireTabViewEvents() {
+  const main = document.getElementById("main");
+
+  main.querySelectorAll("[data-act]").forEach((el) => {
+    const act = el.dataset.act;
+    el.addEventListener("click", (e) => {
+      if (act === "toggle") {
+        const id = el.dataset.id;
+        if (state.ui.collapsed[id]) delete state.ui.collapsed[id];
+        else state.ui.collapsed[id] = true;
+        saveState();
+        renderTabView(state.ui.activeTabId);
+      } else if (act === "rename-tab") {
+        openTabForm(el.dataset.id);
+      } else if (act === "add-link") {
+        openLinkForm(null, { tabId: el.dataset.tab });
+      } else if (act === "add-child") {
+        const parent = getLink(el.dataset.id);
+        if (parent) openLinkForm(null, { tabId: parent.tabId, parentId: parent.id, level: parent.level + 1 });
+      } else if (act === "edit-link") {
+        openLinkForm(el.dataset.id);
+      } else if (act === "delete-link") {
+        deleteLink(el.dataset.id);
+      } else if (act === "copy-link") {
+        copyLinkUrl(el.dataset.id);
+      }
+    });
+  });
+}
+
+/* ============================================================
+   RENDER: ADMIN / MANAGE PAGE
+   ============================================================ */
+function renderAdminView() {
+  const main = document.getElementById("main");
+
+  const tabsHtml = state.tabs.length
+    ? state.tabs.map((t) => {
+        const count = state.links.filter((l) => l.tabId === t.id).length;
+        return `<div class="list-item">
+          ${ico("folder", "ic--sm")}
+          <span class="list-item__name">${esc(t.name)}</span>
+          <span class="list-item__meta">${count} link${count === 1 ? "" : "s"}</span>
+          <button class="btn--icon" data-act="rename-tab" data-id="${esc(t.id)}" title="Rename">${ico("edit")}</button>
+          <button class="btn--icon" data-act="delete-tab" data-id="${esc(t.id)}" title="Delete">${ico("trash")}</button>
+        </div>`;
+      }).join("")
+    : `<p class="list-item__meta" style="padding:8px;">No tabs yet. Add one to begin.</p>`;
+
+  const contacts = sortedContacts();
+  const contactsHtml = contacts.length
+    ? contacts.map((c) => {
+        const meta = [c.phone ? esc(c.phone) : "", c.email ? esc(c.email) : ""].filter(Boolean).join(" · ");
+        return `<div class="list-item">
+          ${ico("share", "ic--sm")}
+          <span class="list-item__name">${esc(c.name)}</span>
+          <span class="list-item__meta">${meta || "no email / number"}</span>
+          <button class="btn--icon" data-act="edit-contact" data-id="${esc(c.id)}" title="Edit">${ico("edit")}</button>
+          <button class="btn--icon" data-act="delete-contact" data-id="${esc(c.id)}" title="Delete">${ico("trash")}</button>
+        </div>`;
+      }).join("")
+    : `<p class="list-item__meta" style="padding:8px;">No contacts yet. Add people you message or invite often.</p>`;
+
+  const totalLinks = state.links.length;
+
+  main.innerHTML = `
+    <div class="toolbar">
+      <h1 class="toolbar__title">${ico("settings")} <span>Manage</span></h1>
+    </div>
+
+    <div class="admin-grid">
+      <div class="card">
+        <h2 class="card__title">${ico("folder")} Tabs</h2>
+        <div class="list" style="margin-bottom:14px;">${tabsHtml}</div>
+        <button class="btn btn--primary" data-act="add-tab">${ico("plus")}Add Tab</button>
+      </div>
+
+      <div class="card">
+        <h2 class="card__title">${ico("link")} Links</h2>
+        <p class="list-item__meta" style="margin-top:0;">You have <strong>${totalLinks}</strong> link${totalLinks === 1 ? "" : "s"} across <strong>${state.tabs.length}</strong> tab${state.tabs.length === 1 ? "" : "s"}.</p>
+        <button class="btn btn--primary" data-act="add-link-any" ${state.tabs.length ? "" : "disabled"}>${ico("plus")}Add Link</button>
+        ${state.tabs.length ? "" : '<p class="list-item__meta">Create a tab first to add links.</p>'}
+      </div>
+
+      <div class="card">
+        <h2 class="card__title">${ico("save")} Backup &amp; Restore</h2>
+        <p class="list-item__meta" style="margin-top:0;">Export your data to a JSON file for backup, or import it on another device/browser.</p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn" data-act="export">${ico("download")}Export JSON</button>
+          <button class="btn" data-act="import">${ico("upload")}Import JSON</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="card__title">${ico("cloud")} Cross-Device Sync</h2>
+        <p class="list-item__meta" style="margin-top:0;">Keep bookmarks in sync across phone, tablet &amp; desktop using a private GitHub Gist. Your token stays on each device.</p>
+        <button class="btn" data-act="sync-settings">${ico("link")}Sync settings…</button>
+      </div>
+
+      <div class="card">
+        <h2 class="card__title">${ico("share")} Contacts</h2>
+        <p class="list-item__meta" style="margin-top:0;">People with an email and/or WhatsApp number. Used when inviting guests to meetings and composing WhatsApp messages.</p>
+        <div class="list" style="margin:10px 0 14px;">${contactsHtml}</div>
+        <button class="btn btn--primary" data-act="add-contact">${ico("plus")}Add Contact</button>
+      </div>
+
+      <div class="card">
+        <h2 class="card__title">${ico("calendar")} Calendar Event</h2>
+        <p class="list-item__meta" style="margin-top:0;">Create a meeting/appointment and send it to Google Calendar, or download an .ics for Apple/Outlook.</p>
+        <button class="btn" data-act="new-event">${ico("plus")}New Event</button>
+      </div>
+
+      <div class="card">
+        <h2 class="card__title">${ico("alert")} Danger Zone</h2>
+        <p class="list-item__meta" style="margin-top:0;">Reset everything back to the original sample data.</p>
+        <button class="btn btn--danger" data-act="reset">${ico("refresh")}Reset to Defaults</button>
+      </div>
+    </div>
+  `;
+
+  wireAdminEvents();
+}
+
+function wireAdminEvents() {
+  const main = document.getElementById("main");
+  main.querySelectorAll("[data-act]").forEach((el) => {
+    const act = el.dataset.act;
+    el.addEventListener("click", () => {
+      switch (act) {
+        case "add-tab": openTabForm(null); break;
+        case "rename-tab": openTabForm(el.dataset.id); break;
+        case "delete-tab": deleteTab(el.dataset.id); break;
+        case "add-link-any": openLinkForm(null, {}); break;
+        case "export": exportJson(); break;
+        case "import": document.getElementById("importInput").click(); break;
+        case "sync-settings": openSyncSettings(); break;
+        case "new-event": openEventForm(); break;
+        case "add-contact": openContactForm(null); break;
+        case "edit-contact": openContactForm(el.dataset.id); break;
+        case "delete-contact": deleteContact(el.dataset.id); break;
+        case "reset": resetData(); break;
+      }
+    });
+  });
+}
+
+/* ============================================================
+   FORM: ADD / EDIT TAB
+   ============================================================ */
+function openTabForm(tabId) {
+  const editing = !!tabId;
+  const tab = editing ? getTab(tabId) : null;
+  const title = editing ? "Rename Tab" : "Add Tab";
+
+  openModal(title, `
+    <form id="tabForm" novalidate>
+      <div class="field">
+        <label for="tabName">Tab name</label>
+        <input type="text" id="tabName" maxlength="60" placeholder="e.g. My Coaching" value="${editing ? esc(tab.name) : ""}" />
+        <div class="field__error" id="tabNameErr">Please enter a tab name.</div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn" id="tabCancel">Cancel</button>
+        <button type="submit" class="btn btn--primary">${editing ? "Save" : "Add Tab"}</button>
+      </div>
+    </form>
+  `, (body) => {
+    const form = body.querySelector("#tabForm");
+    const nameInput = body.querySelector("#tabName");
+    const nameErr = body.querySelector("#tabNameErr");
+
+    body.querySelector("#tabCancel").addEventListener("click", closeModal);
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = nameInput.value.trim();
+      if (!name) {
+        nameInput.classList.add("is-invalid");
+        nameErr.classList.add("is-shown");
+        nameInput.focus();
+        return;
+      }
+      if (editing) {
+        tab.name = name;
+        toast("Tab renamed.", "success");
+      } else {
+        const newTab = { id: uid("tab"), name };
+        state.tabs.push(newTab);
+        state.ui.activeTabId = newTab.id;
+        toast("Tab added.", "success");
+      }
+      saveState();
+      closeModal();
+      render();
+    });
+  });
+}
+
+/* ============================================================
+   FORM: ADD / EDIT LINK (with dynamic ancestor selection)
+   ============================================================ */
+function openLinkForm(linkId, defaults = {}) {
+  const editing = !!linkId;
+  const link = editing ? getLink(linkId) : null;
+
+  // Pick a sensible default tab: explicit default > current active tab
+  // (unless we're on the admin tab) > first tab.
+  let defaultTabId = defaults.tabId;
+  if (!defaultTabId && state.ui.activeTabId !== ADMIN_TAB_ID) defaultTabId = state.ui.activeTabId;
+  if (!defaultTabId) defaultTabId = state.tabs[0] ? state.tabs[0].id : null;
+
+  // Initial form values.
+  const init = editing
+    ? { name: link.name, url: link.url, level: link.level, tabId: link.tabId, parentId: link.parentId }
+    : {
+        name: "",
+        url: "",
+        level: defaults.level != null ? defaults.level : 0,
+        tabId: defaultTabId,
+        parentId: defaults.parentId != null ? defaults.parentId : null,
+      };
+
+  // Make sure tabId is valid.
+  if (!getTab(init.tabId)) init.tabId = state.tabs[0] ? state.tabs[0].id : null;
+  if (!init.tabId) { toast("Create a tab first.", "error"); return; }
+
+  const tabOptions = state.tabs
+    .map((t) => `<option value="${esc(t.id)}" ${t.id === init.tabId ? "selected" : ""}>${esc(t.name)}</option>`)
+    .join("");
+
+  openModal(editing ? "Edit Link" : "Add Link", `
+    <form id="linkForm" novalidate>
+      <div class="field">
+        <label for="lkName">Display name</label>
+        <input type="text" id="lkName" maxlength="120" placeholder="e.g. Session Notes" value="${esc(init.name)}" />
+        <div class="field__error" id="lkNameErr">Please enter a display name.</div>
+      </div>
+
+      <div class="field">
+        <label for="lkUrl">URL</label>
+        <input type="url" id="lkUrl" placeholder="https://example.com" value="${esc(init.url)}" />
+        <div class="field__error" id="lkUrlErr">Please enter a valid URL.</div>
+      </div>
+
+      <div class="field">
+        <label for="lkTab">Tab</label>
+        <select id="lkTab">${tabOptions}</select>
+      </div>
+
+      <div class="field">
+        <label for="lkLevel">Level <span class="hint">(0 = top level, deeper = nested)</span></label>
+        <select id="lkLevel"></select>
+      </div>
+
+      <div id="ancestorContainer"><!-- ancestor selectors injected here --></div>
+
+      <div class="form-actions">
+        <button type="button" class="btn" id="lkCancel">Cancel</button>
+        <button type="submit" class="btn btn--primary">${editing ? "Save" : "Add Link"}</button>
+      </div>
+    </form>
+  `, (body) => {
+    const form = body.querySelector("#linkForm");
+    const nameInput = body.querySelector("#lkName");
+    const urlInput = body.querySelector("#lkUrl");
+    const tabSelect = body.querySelector("#lkTab");
+    const levelSelect = body.querySelector("#lkLevel");
+    const ancestorContainer = body.querySelector("#ancestorContainer");
+
+    // Compute the max level the user may choose for the selected tab.
+    // Allowed: any existing depth + 1 (so they can always go one deeper),
+    // and at least level 0. When editing, we cannot place a node below
+    // a depth that would orphan its own children, but we keep it simple
+    // and recompute parents each time.
+    function maxSelectableLevel(tabId) {
+      let maxExisting = -1;
+      state.links.forEach((l) => {
+        if (l.tabId === tabId && (!editing || l.id !== linkId)) {
+          if (l.level > maxExisting) maxExisting = l.level;
+        }
+      });
+      // user can add a child one level deeper than the deepest existing node
+      return Math.max(0, maxExisting + 1);
+    }
+
+    // (Re)build the Level dropdown for the current tab.
+    function buildLevelOptions(selectedLevel) {
+      const tabId = tabSelect.value;
+      const max = maxSelectableLevel(tabId);
+      let opts = "";
+      for (let lvl = 0; lvl <= max; lvl++) {
+        opts += `<option value="${lvl}" ${lvl === selectedLevel ? "selected" : ""}>Level ${lvl}${lvl === 0 ? " (top level)" : ""}</option>`;
+      }
+      levelSelect.innerHTML = opts;
+    }
+
+    // Build the chain of ancestor dropdowns based on chosen level.
+    // For level N we need to choose an ancestor at each level 0..N-1.
+    // Each dropdown filters by the selection of the previous one.
+    function buildAncestorSelectors(preset) {
+      const tabId = tabSelect.value;
+      const level = parseInt(levelSelect.value, 10);
+      ancestorContainer.innerHTML = "";
+
+      if (level === 0) return; // no parent needed
+
+      // Determine the preset ancestor chain (when editing or adding a child).
+      // preset.parentId is the immediate parent; we walk up to build chain.
+      let presetChain = [];
+      if (preset && preset.parentId) {
+        let cur = getLink(preset.parentId);
+        while (cur) { presetChain.unshift(cur.id); cur = cur.parentId ? getLink(cur.parentId) : null; }
+      }
+
+      // Render one dropdown per ancestor level.
+      for (let lvl = 0; lvl < level; lvl++) {
+        const wrap = document.createElement("div");
+        wrap.className = "field";
+        const labelText = lvl === 0 ? "Root (Level 0)" : "Parent at Level " + lvl;
+        wrap.innerHTML = `
+          <label for="anc_${lvl}">${labelText}</label>
+          <select id="anc_${lvl}" data-anc-level="${lvl}"></select>
+          <div class="field__error" id="ancErr_${lvl}">Please choose an item.</div>
+        `;
+        ancestorContainer.appendChild(wrap);
+      }
+
+      // Populate each dropdown, cascading from parent's selection.
+      function populateFrom(startLevel) {
+        for (let lvl = startLevel; lvl < level; lvl++) {
+          const sel = ancestorContainer.querySelector(`#anc_${lvl}`);
+          if (!sel) continue;
+          let candidates;
+          if (lvl === 0) {
+            candidates = childrenOf(tabId, null);
+          } else {
+            const parentSel = ancestorContainer.querySelector(`#anc_${lvl - 1}`);
+            const parentId = parentSel ? parentSel.value : null;
+            candidates = parentId ? childrenOf(tabId, parentId) : [];
+          }
+
+          // When editing, exclude the node itself and its descendants
+          // to prevent creating a cycle.
+          if (editing) {
+            const banned = new Set(collectSubtree(linkId));
+            candidates = candidates.filter((c) => !banned.has(c.id));
+          }
+
+          const presetId = presetChain[lvl];
+          if (!candidates.length) {
+            sel.innerHTML = `<option value="">— none available —</option>`;
+          } else {
+            sel.innerHTML = candidates
+              .map((c) => `<option value="${esc(c.id)}" ${c.id === presetId ? "selected" : ""}>${esc(c.name)}</option>`)
+              .join("");
+          }
+        }
+      }
+
+      populateFrom(0);
+
+      // Wire cascading change events.
+      for (let lvl = 0; lvl < level - 1; lvl++) {
+        const sel = ancestorContainer.querySelector(`#anc_${lvl}`);
+        if (sel) sel.addEventListener("change", () => populateFrom(lvl + 1));
+      }
+    }
+
+    // Initial build.
+    buildLevelOptions(init.level);
+    buildAncestorSelectors({ parentId: init.parentId });
+
+    // React to tab change: rebuild levels + ancestors fresh.
+    tabSelect.addEventListener("change", () => {
+      buildLevelOptions(0);
+      buildAncestorSelectors({ parentId: null });
+    });
+
+    // React to level change: rebuild ancestor selectors.
+    levelSelect.addEventListener("change", () => {
+      buildAncestorSelectors({ parentId: null });
+    });
+
+    body.querySelector("#lkCancel").addEventListener("click", closeModal);
+
+    // Submit handler with validation.
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      let ok = true;
+
+      const name = nameInput.value.trim();
+      const nameErr = body.querySelector("#lkNameErr");
+      if (!name) { nameInput.classList.add("is-invalid"); nameErr.classList.add("is-shown"); ok = false; }
+      else { nameInput.classList.remove("is-invalid"); nameErr.classList.remove("is-shown"); }
+
+      const url = normalizeUrl(urlInput.value);
+      const urlErr = body.querySelector("#lkUrlErr");
+      if (!url) { urlInput.classList.add("is-invalid"); urlErr.classList.add("is-shown"); ok = false; }
+      else { urlInput.classList.remove("is-invalid"); urlErr.classList.remove("is-shown"); }
+
+      const tabId = tabSelect.value;
+      const level = parseInt(levelSelect.value, 10);
+
+      // Resolve parentId from the deepest ancestor dropdown.
+      let parentId = null;
+      if (level > 0) {
+        const deepest = ancestorContainer.querySelector(`#anc_${level - 1}`);
+        parentId = deepest ? deepest.value : "";
+        // Validate the full ancestor chain is selected.
+        for (let lvl = 0; lvl < level; lvl++) {
+          const sel = ancestorContainer.querySelector(`#anc_${lvl}`);
+          const err = body.querySelector(`#ancErr_${lvl}`);
+          if (!sel || !sel.value) {
+            if (sel) sel.classList.add("is-invalid");
+            if (err) err.classList.add("is-shown");
+            ok = false;
+          } else {
+            sel.classList.remove("is-invalid");
+            if (err) err.classList.remove("is-shown");
+          }
+        }
+      }
+
+      if (!ok) { toast("Please fix the highlighted fields.", "error"); return; }
+
+      // Guard against cycles when editing.
+      if (editing && parentId && (parentId === linkId || isAncestor(linkId, parentId))) {
+        toast("Cannot move a link inside its own subtree.", "error");
+        return;
+      }
+
+      if (editing) {
+        // If level/parent changed, re-parent descendants by shifting their
+        // levels by the same delta so the subtree stays consistent.
+        const delta = level - link.level;
+        if (delta !== 0) {
+          const subtree = collectSubtree(linkId).filter((id) => id !== linkId);
+          subtree.forEach((id) => { const n = getLink(id); if (n) n.level += delta; });
+        }
+        link.name = name;
+        link.url = url;
+        link.level = level;
+        link.parentId = level === 0 ? null : parentId;
+        link.tabId = tabId;
+        // If moved to a different tab, move whole subtree along.
+        collectSubtree(linkId).forEach((id) => { const n = getLink(id); if (n) n.tabId = tabId; });
+        toast("Link updated.", "success");
+      } else {
+        state.links.push({
+          id: uid("lnk"),
+          name, url, level,
+          parentId: level === 0 ? null : parentId,
+          tabId,
+        });
+        toast("Link added.", "success");
+      }
+
+      saveState();
+      closeModal();
+      // Switch to the tab the link belongs to so the user sees it.
+      if (state.ui.activeTabId !== ADMIN_TAB_ID) state.ui.activeTabId = tabId;
+      render();
+    });
+  });
+}
+
+/* ============================================================
+   COPY LINK URL
+   ============================================================ */
+// Copy a link's URL to the clipboard so it can be shared.
+// Uses the async Clipboard API when available (https/localhost),
+// with a legacy textarea fallback for file:// or older browsers.
+async function copyLinkUrl(linkId) {
+  const link = getLink(linkId);
+  if (!link) return;
+  const text = link.url;
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    }
+    toast("Link copied to clipboard.", "success");
+  } catch (e) {
+    toast("Could not copy automatically. URL: " + text, "error", 6000);
+  }
+}
+
+/* ============================================================
+   CONTACTS  (name + email + WhatsApp number)
+   ------------------------------------------------------------
+   Stored in state.contacts: [{ id, name, email, phone }]
+   - phone is kept as the user typed it; waNumber() strips it to
+     digits only for wa.me links (international format, no +).
+   - Reused by the Calendar event form (emails) and the WhatsApp
+     compose dialog (numbers).
+   ============================================================ */
+
+// Reduce a phone string to the digits-only form wa.me expects.
+function waNumber(phone) {
+  return String(phone || "").replace(/\D/g, "");
+}
+
+function getContact(id) {
+  return (state.contacts || []).find((c) => c.id === id) || null;
+}
+
+function sortedContacts() {
+  return (state.contacts || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// Add / edit a contact.
+function openContactForm(contactId) {
+  const editing = contactId ? getContact(contactId) : null;
+
+  openModal(editing ? "Edit Contact" : "Add Contact", `
+    <form id="ctForm" novalidate>
+      <div class="field">
+        <label for="ctName">Name</label>
+        <input type="text" id="ctName" maxlength="80" placeholder="e.g. Jane Smith" value="${esc(editing ? editing.name : "")}" />
+        <div class="field__error" id="ctNameErr">Please enter a name.</div>
+      </div>
+      <div class="field">
+        <label for="ctEmail">Email <span class="hint">(optional)</span></label>
+        <input type="email" id="ctEmail" maxlength="160" placeholder="name@example.com" value="${esc(editing ? (editing.email || "") : "")}" />
+        <div class="field__error" id="ctEmailErr">That doesn't look like a valid email.</div>
+      </div>
+      <div class="field">
+        <label for="ctPhone">WhatsApp number <span class="hint">(optional — include country code)</span></label>
+        <input type="tel" id="ctPhone" maxlength="32" placeholder="e.g. +1 555 123 4567" value="${esc(editing ? (editing.phone || "") : "")}" />
+        <div class="field__error" id="ctPhoneErr">Enter a valid number (digits, with country code).</div>
+        <p class="note" style="margin-top:8px;">Tip: include the country code (e.g. +1, +44, +91). WhatsApp needs the full international number.</p>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn" id="ctCancel">Cancel</button>
+        <button type="submit" class="btn btn--primary">${editing ? "Save" : "Add"}</button>
+      </div>
+    </form>
+  `, (body) => {
+    const nameInput = body.querySelector("#ctName");
+    const emailInput = body.querySelector("#ctEmail");
+    const phoneInput = body.querySelector("#ctPhone");
+
+    body.querySelector("#ctCancel").addEventListener("click", closeModal);
+
+    body.querySelector("#ctForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      let ok = true;
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim();
+      const phone = phoneInput.value.trim();
+
+      if (!name) { nameInput.classList.add("is-invalid"); body.querySelector("#ctNameErr").classList.add("is-shown"); ok = false; }
+      else { nameInput.classList.remove("is-invalid"); body.querySelector("#ctNameErr").classList.remove("is-shown"); }
+
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        emailInput.classList.add("is-invalid"); body.querySelector("#ctEmailErr").classList.add("is-shown"); ok = false;
+      } else { emailInput.classList.remove("is-invalid"); body.querySelector("#ctEmailErr").classList.remove("is-shown"); }
+
+      if (phone && waNumber(phone).length < 7) {
+        phoneInput.classList.add("is-invalid"); body.querySelector("#ctPhoneErr").classList.add("is-shown"); ok = false;
+      } else { phoneInput.classList.remove("is-invalid"); body.querySelector("#ctPhoneErr").classList.remove("is-shown"); }
+
+      if (!email && !phone) {
+        emailInput.classList.add("is-invalid"); phoneInput.classList.add("is-invalid");
+        toast("Add at least an email or a WhatsApp number.", "error");
+        ok = false;
+      }
+      if (!ok) return;
+
+      if (!Array.isArray(state.contacts)) state.contacts = [];
+      if (editing) {
+        editing.name = name; editing.email = email; editing.phone = phone;
+        toast("Contact updated.", "success");
+      } else {
+        state.contacts.push({ id: uid("ct"), name, email, phone });
+        toast("Contact added.", "success");
+      }
+      saveState();
+      closeModal();
+      render();
+    });
+  });
+}
+
+async function deleteContact(id) {
+  const c = getContact(id);
+  if (!c) return;
+  const ok = await confirmDialog(`Delete contact "${c.name}"?`, "Delete");
+  if (!ok) return;
+  state.contacts = (state.contacts || []).filter((x) => x.id !== id);
+  saveState();
+  render();
+  toast("Contact deleted.", "success");
+}
+
+/* ============================================================
+   WHATSAPP COMPOSE  (global — like New Event)
+   ------------------------------------------------------------
+   WhatsApp links can only target ONE chat at a time (no bulk/
+   broadcast via links). So for multiple recipients we open each
+   selected contact's chat in turn — one tap per person — with the
+   same pre-filled text. The user always taps Send in WhatsApp.
+   ============================================================ */
+function openWhatsAppCompose(prefill = {}) {
+  const contacts = sortedContacts().filter((c) => waNumber(c.phone).length >= 7);
+
+  const contactRows = contacts.length
+    ? contacts.map((c) => `
+        <label class="pick-row">
+          <input type="checkbox" class="wa-pick" value="${esc(c.id)}" />
+          <span class="pick-row__name">${esc(c.name)}</span>
+          <span class="pick-row__meta">${esc(c.phone)}</span>
+        </label>`).join("")
+    : `<p class="list-item__meta" style="padding:6px 2px;">No contacts with a WhatsApp number yet. Add some in <strong>Manage → Contacts</strong>, or send without a recipient and pick a chat inside WhatsApp.</p>`;
+
+  openModal("Compose WhatsApp", `
+    <form id="waForm" novalidate>
+      <div class="field">
+        <label for="waMsg">Message</label>
+        <textarea id="waMsg" maxlength="2000" placeholder="Type your message…">${esc(prefill.text || "")}</textarea>
+      </div>
+      <div class="field">
+        <label>Recipients <span class="hint">(optional — leave all unchecked to pick a chat in WhatsApp)</span></label>
+        <div class="pick-list" id="waPicks">${contactRows}</div>
+      </div>
+      <p class="note">WhatsApp opens one chat at a time, so with several people selected you'll send to each in turn. You always tap <strong>Send</strong> inside WhatsApp.</p>
+      <div class="form-actions">
+        <button type="button" class="btn" id="waCancel">Cancel</button>
+        <button type="submit" class="btn btn--primary">${WHATSAPP_SVG}<span>Open WhatsApp</span></button>
+      </div>
+    </form>
+  `, (body) => {
+    body.querySelector("#waCancel").addEventListener("click", closeModal);
+
+    body.querySelector("#waForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const msg = body.querySelector("#waMsg").value.trim();
+      const picked = Array.from(body.querySelectorAll(".wa-pick:checked")).map((cb) => getContact(cb.value)).filter(Boolean);
+
+      // No recipient: open WhatsApp with text only; user chooses the chat.
+      if (picked.length === 0) {
+        window.open("https://wa.me/?text=" + encodeURIComponent(msg), "_blank", "noopener,noreferrer");
+        closeModal();
+        return;
+      }
+      // One recipient: straight to their chat.
+      if (picked.length === 1) {
+        const c = picked[0];
+        window.open("https://wa.me/" + waNumber(c.phone) + "?text=" + encodeURIComponent(msg), "_blank", "noopener,noreferrer");
+        closeModal();
+        return;
+      }
+      // Multiple: show a send-queue (one tap per person avoids popup blocking).
+      openWhatsAppQueue(picked, msg);
+    });
+  });
+}
+
+// Send-to-each queue for multiple WhatsApp recipients.
+function openWhatsAppQueue(contacts, msg) {
+  const sent = new Set();
+  function rowsHtml() {
+    return contacts.map((c) => `
+      <div class="queue-row${sent.has(c.id) ? " is-sent" : ""}">
+        <span class="pick-row__name">${esc(c.name)}</span>
+        <span class="pick-row__meta">${esc(c.phone)}</span>
+        <button type="button" class="btn btn--sm ${sent.has(c.id) ? "" : "btn--primary"}" data-ct="${esc(c.id)}">
+          ${sent.has(c.id) ? "Sent ✓" : "Open chat"}
+        </button>
+      </div>`).join("");
+  }
+
+  openModal("Send to each", `
+    <p class="share-sub">Tap each person to open their WhatsApp chat with your message ready to send.</p>
+    <div class="queue-list" id="waQueue">${rowsHtml()}</div>
+    <div class="form-actions">
+      <button type="button" class="btn" id="waQueueDone">Done</button>
+    </div>
+  `, (body) => {
+    const queue = body.querySelector("#waQueue");
+    function wire() {
+      queue.querySelectorAll("button[data-ct]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const c = getContact(btn.dataset.ct);
+          if (!c) return;
+          window.open("https://wa.me/" + waNumber(c.phone) + "?text=" + encodeURIComponent(msg), "_blank", "noopener,noreferrer");
+          sent.add(c.id);
+          queue.innerHTML = rowsHtml();
+          wire();
+        });
+      });
+    }
+    wire();
+    body.querySelector("#waQueueDone").addEventListener("click", closeModal);
+  });
+}
+
+/* ============================================================
+   DELETE OPERATIONS
+   ============================================================ */
+async function deleteLink(linkId) {
+  const link = getLink(linkId);
+  if (!link) return;
+  const subtree = collectSubtree(linkId);
+  const childCount = subtree.length - 1;
+
+  const msg = childCount > 0
+    ? `Delete "${link.name}" and its ${childCount} nested item${childCount === 1 ? "" : "s"}? This cannot be undone.`
+    : `Delete "${link.name}"? This cannot be undone.`;
+
+  const confirmed = await confirmDialog(msg, "Delete");
+  if (!confirmed) return;
+
+  const banned = new Set(subtree);
+  state.links = state.links.filter((l) => !banned.has(l.id));
+  banned.forEach((id) => delete state.ui.collapsed[id]);
+  saveState();
+  render();
+  toast("Link deleted.", "success");
+}
+
+async function deleteTab(tabId) {
+  const tab = getTab(tabId);
+  if (!tab) return;
+  const count = state.links.filter((l) => l.tabId === tabId).length;
+
+  const msg = count > 0
+    ? `Delete tab "${tab.name}" and all ${count} link${count === 1 ? "" : "s"} inside it? This cannot be undone.`
+    : `Delete tab "${tab.name}"? This cannot be undone.`;
+
+  const confirmed = await confirmDialog(msg, "Delete Tab");
+  if (!confirmed) return;
+
+  state.tabs = state.tabs.filter((t) => t.id !== tabId);
+  state.links = state.links.filter((l) => l.tabId !== tabId);
+
+  if (state.ui.activeTabId === tabId) {
+    state.ui.activeTabId = state.tabs[0] ? state.tabs[0].id : ADMIN_TAB_ID;
+  }
+  saveState();
+  render();
+  toast("Tab deleted.", "success");
+}
+
+async function resetData() {
+  const confirmed = await confirmDialog(
+    "Reset all data back to the original sample bookmarks? Your current bookmarks will be permanently removed.",
+    "Reset Everything"
+  );
+  if (!confirmed) return;
+  state = seedData();
+  saveState();
+  render();
+  toast("Data reset to defaults.", "success");
+}
+
+/* ============================================================
+   IMPORT / EXPORT JSON
+   ============================================================ */
+function exportJson() {
+  const payload = {
+    app: "My Bookmarks",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    tabs: state.tabs,
+    links: state.links,
+    contacts: state.contacts,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `my-bookmarks-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast("Exported bookmarks to JSON.", "success");
+}
+
+document.getElementById("importInput").addEventListener("change", (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data.tabs) || !Array.isArray(data.links)) {
+        throw new Error("Invalid structure");
+      }
+      // Basic shape validation/sanitisation.
+      const tabs = data.tabs
+        .filter((t) => t && typeof t.id === "string" && typeof t.name === "string")
+        .map((t) => ({ id: t.id, name: String(t.name).slice(0, 80) }));
+
+      const tabIds = new Set(tabs.map((t) => t.id));
+      const links = data.links
+        .filter((l) => l && typeof l.id === "string" && typeof l.name === "string" && tabIds.has(l.tabId))
+        .map((l) => ({
+          id: l.id,
+          name: String(l.name).slice(0, 200),
+          url: normalizeUrl(l.url) || String(l.url || ""),
+          level: Number.isInteger(l.level) && l.level >= 0 ? l.level : 0,
+          parentId: l.parentId || null,
+          tabId: l.tabId,
+        }));
+
+      const contacts = Array.isArray(data.contacts)
+        ? data.contacts
+            .filter((c) => c && typeof c.id === "string" && typeof c.name === "string")
+            .map((c) => ({
+              id: c.id,
+              name: String(c.name).slice(0, 80),
+              email: String(c.email || "").slice(0, 160),
+              phone: String(c.phone || "").slice(0, 32),
+            }))
+        : [];
+
+      confirmDialog(
+        `Import ${tabs.length} tab(s), ${links.length} link(s) and ${contacts.length} contact(s)? This will replace your current data.`,
+        "Import", false
+      ).then((ok) => {
+        if (!ok) return;
+        state.tabs = tabs;
+        state.links = links;
+        state.contacts = contacts;
+        state.ui = { activeTabId: tabs[0] ? tabs[0].id : ADMIN_TAB_ID, collapsed: {} };
+        saveState();
+        render();
+        toast("Data imported successfully.", "success");
+      });
+    } catch (err) {
+      toast("Import failed: the file is not valid bookmark JSON.", "error");
+    } finally {
+      e.target.value = ""; // allow re-importing the same file
+    }
+  };
+  reader.onerror = () => toast("Could not read the file.", "error");
+  reader.readAsText(file);
+});
+
+/* ============================================================
+   CALENDAR EVENTS  (Google Calendar link + .ics download)
+   ------------------------------------------------------------
+   100% client-side & private: nothing is sent anywhere. We only
+   build a URL / a text file locally. Your data leaves the device
+   only if YOU choose to click the Google Calendar link.
+   ============================================================ */
+
+// Format a Date as the UTC stamp Google Calendar / iCalendar expect:
+// YYYYMMDDTHHMMSSZ
+function toCalStamp(date) {
+  const p = (n) => String(n).padStart(2, "0");
+  return (
+    date.getUTCFullYear() +
+    p(date.getUTCMonth() + 1) +
+    p(date.getUTCDate()) +
+    "T" +
+    p(date.getUTCHours()) +
+    p(date.getUTCMinutes()) +
+    p(date.getUTCSeconds()) +
+    "Z"
+  );
+}
+
+// Build the official Google Calendar "create event" URL.
+function buildGoogleCalUrl(ev) {
+  const params = new URLSearchParams();
+  params.set("action", "TEMPLATE");
+  params.set("text", ev.title);
+  params.set("dates", toCalStamp(ev.start) + "/" + toCalStamp(ev.end));
+  if (ev.details) params.set("details", ev.details);
+  if (ev.location) params.set("location", ev.location);
+  if (ev.attendees && ev.attendees.length) params.set("add", ev.attendees.join(","));
+  return "https://calendar.google.com/calendar/render?" + params.toString();
+}
+
+// Escape text for the iCalendar (.ics) format.
+function icsEscape(text) {
+  return String(text || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\r?\n/g, "\\n");
+}
+
+// Build and download a universal .ics file (works with Apple Calendar,
+// Outlook, Google import, etc.).
+function downloadIcs(ev) {
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//My Bookmarks//Event//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    "UID:" + uid("evt") + "@my-bookmarks",
+    "DTSTAMP:" + toCalStamp(new Date()),
+    "DTSTART:" + toCalStamp(ev.start),
+    "DTEND:" + toCalStamp(ev.end),
+    "SUMMARY:" + icsEscape(ev.title),
+  ];
+  if (ev.location) lines.push("LOCATION:" + icsEscape(ev.location));
+  if (ev.details) lines.push("DESCRIPTION:" + icsEscape(ev.details));
+  (ev.attendees || []).forEach((a) => {
+    lines.push("ATTENDEE;CN=" + icsEscape(a) + ":mailto:" + a);
+  });
+  lines.push("END:VEVENT", "END:VCALENDAR");
+
+  const blob = new Blob([lines.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = (ev.title || "event").replace(/[^\w\-]+/g, "_").slice(0, 40) + ".ics";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Gather a Date from the date + time inputs (local time).
+function combineDateTime(dateStr, timeStr) {
+  if (!dateStr) return null;
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const [hh, mm] = (timeStr || "00:00").split(":").map(Number);
+  return new Date(y, m - 1, d, hh || 0, mm || 0, 0, 0);
+}
+
+// Open the "Create Event" modal.
+function openEventForm(prefill = {}) {
+  const today = new Date();
+  const dateVal = today.toISOString().slice(0, 10);
+  // Default 1-hour slot at the next round hour.
+  const startH = String(Math.min(today.getHours() + 1, 23)).padStart(2, "0");
+  const endH = String(Math.min(today.getHours() + 2, 23)).padStart(2, "0");
+
+  // Local list of attendee emails managed in the modal.
+  let attendees = Array.isArray(prefill.attendees) ? prefill.attendees.slice() : [];
+  const contactsWithEmail = sortedContacts().filter((c) => c.email);
+
+  openModal("Create Calendar Event", `
+    <form id="evForm" novalidate>
+      <div class="field">
+        <label for="evTitle">Title</label>
+        <input type="text" id="evTitle" maxlength="140" placeholder="e.g. Review proposal" value="${esc(prefill.title || "")}" />
+        <div class="field__error" id="evTitleErr">Please enter a title.</div>
+      </div>
+
+      <div class="field">
+        <label for="evDate">Date</label>
+        <input type="date" id="evDate" value="${dateVal}" />
+        <div class="field__error" id="evDateErr">Please choose a date.</div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label for="evStart">Start time</label>
+          <input type="time" id="evStart" value="${startH}:00" />
+        </div>
+        <div class="field">
+          <label for="evEnd">End time</label>
+          <input type="time" id="evEnd" value="${endH}:00" />
+          <div class="field__error" id="evEndErr">End must be after start.</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="evLocation">Location / link <span class="hint">(optional)</span></label>
+        <input type="text" id="evLocation" maxlength="300" placeholder="Address, meeting room, or a URL" value="${esc(prefill.location || "")}" />
+      </div>
+
+      <div class="field">
+        <label for="evDetails">Description <span class="hint">(optional)</span></label>
+        <textarea id="evDetails" maxlength="2000" placeholder="Agenda, notes, reference links\u2026">${esc(prefill.details || "")}</textarea>
+      </div>
+
+      <div class="field">
+        <label for="evAttendee">Attendees <span class="hint">(optional \u2014 type an email, press Enter)</span></label>
+        <input type="email" id="evAttendee" placeholder="name@example.com" />
+        <div class="field__error" id="evAttendeeErr">That doesn't look like a valid email.</div>
+        ${contactsWithEmail.length ? `<div class="contact-pick" id="evContactPick">
+          <span class="contact-pick__label">From contacts:</span>
+          ${contactsWithEmail.map((c) => `<button type="button" class="contact-tag" data-email="${esc(c.email)}">${ico("plus", "ic--sm")}${esc(c.name)}</button>`).join("")}
+        </div>` : ""}
+        <div class="chips" id="evChips"></div>
+      </div>
+
+      <p class="note">\ud83d\udd12 Private: this stays on your device. Choose <strong>Google Calendar</strong> to open a pre-filled event in your browser, or <strong>Download .ics</strong> to import into Apple Calendar / Outlook / Google.</p>
+
+      <div class="form-actions">
+        <button type="button" class="btn" id="evCancel">Cancel</button>
+        <button type="button" class="btn" id="evIcs">\u2b07\ufe0f Download .ics</button>
+        <button type="submit" class="btn btn--primary">\ud83d\udcc5 Google Calendar</button>
+      </div>
+    </form>
+  `, (body) => {
+    const titleInput = body.querySelector("#evTitle");
+    const dateInput = body.querySelector("#evDate");
+    const startInput = body.querySelector("#evStart");
+    const endInput = body.querySelector("#evEnd");
+    const locInput = body.querySelector("#evLocation");
+    const detailsInput = body.querySelector("#evDetails");
+    const attendeeInput = body.querySelector("#evAttendee");
+    const chipsHost = body.querySelector("#evChips");
+
+    function renderChips() {
+      chipsHost.innerHTML = attendees
+        .map((a, i) => `<span class="chip">${esc(a)}<button type="button" data-i="${i}" aria-label="Remove">\u00d7</button></span>`)
+        .join("");
+      chipsHost.querySelectorAll("button").forEach((b) => {
+        b.addEventListener("click", () => {
+          attendees.splice(parseInt(b.dataset.i, 10), 1);
+          renderChips();
+        });
+      });
+    }
+    renderChips();
+
+    // "From contacts" quick-add buttons.
+    body.querySelectorAll(".contact-tag").forEach((tag) => {
+      tag.addEventListener("click", () => {
+        const email = tag.dataset.email;
+        if (email && !attendees.includes(email)) attendees.push(email);
+        tag.classList.add("is-added");
+        renderChips();
+      });
+    });
+
+    function tryAddAttendee() {
+      const val = attendeeInput.value.trim();
+      const err = body.querySelector("#evAttendeeErr");
+      if (!val) return true;
+      // Simple, safe email shape check.
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+        attendeeInput.classList.add("is-invalid");
+        err.classList.add("is-shown");
+        return false;
+      }
+      if (!attendees.includes(val)) attendees.push(val);
+      attendeeInput.value = "";
+      attendeeInput.classList.remove("is-invalid");
+      err.classList.remove("is-shown");
+      renderChips();
+      return true;
+    }
+
+    attendeeInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === ",") { e.preventDefault(); tryAddAttendee(); }
+    });
+    attendeeInput.addEventListener("blur", tryAddAttendee);
+
+    // Validate and build the event object. Returns null if invalid.
+    function buildEvent() {
+      let ok = true;
+      const title = titleInput.value.trim();
+      if (!title) { titleInput.classList.add("is-invalid"); body.querySelector("#evTitleErr").classList.add("is-shown"); ok = false; }
+      else { titleInput.classList.remove("is-invalid"); body.querySelector("#evTitleErr").classList.remove("is-shown"); }
+
+      if (!dateInput.value) { dateInput.classList.add("is-invalid"); body.querySelector("#evDateErr").classList.add("is-shown"); ok = false; }
+      else { dateInput.classList.remove("is-invalid"); body.querySelector("#evDateErr").classList.remove("is-shown"); }
+
+      // Make sure any half-typed attendee is captured.
+      if (!tryAddAttendee()) ok = false;
+
+      const start = combineDateTime(dateInput.value, startInput.value);
+      let end = combineDateTime(dateInput.value, endInput.value);
+      if (start && end && end <= start) {
+        // Auto-fix to +1h if end isn't after start.
+        end = new Date(start.getTime() + 60 * 60 * 1000);
+      }
+
+      if (!ok || !start || !end) { toast("Please fix the highlighted fields.", "error"); return null; }
+
+      return {
+        title,
+        start, end,
+        location: locInput.value.trim(),
+        details: detailsInput.value.trim(),
+        attendees: attendees.slice(),
+      };
+    }
+
+    body.querySelector("#evCancel").addEventListener("click", closeModal);
+
+    body.querySelector("#evIcs").addEventListener("click", () => {
+      const ev = buildEvent();
+      if (!ev) return;
+      downloadIcs(ev);
+      toast("Event .ics downloaded.", "success");
+      closeModal();
+    });
+
+    body.querySelector("#evForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const ev = buildEvent();
+      if (!ev) return;
+      window.open(buildGoogleCalUrl(ev), "_blank", "noopener,noreferrer");
+      toast("Opening Google Calendar\u2026", "info");
+      closeModal();
+    });
+  });
+}
+
+document.getElementById("newEventBtn").addEventListener("click", () => openEventForm());
+document.getElementById("composeWaBtn").addEventListener("click", () => openWhatsAppCompose());
+
+/* ============================================================
+   CROSS-DEVICE SYNC  (optional, via a private GitHub Gist)
+   ------------------------------------------------------------
+   The Gist acts as a simple online key/value store. Your token
+   is stored ONLY in this browser's localStorage (never exported,
+   never sent anywhere except GitHub's API over HTTPS). Use a
+   fine-grained token limited to the "Gists" permission, and keep
+   the Gist secret/private.
+   ============================================================ */
+const SYNC_KEY = "myBookmarks.sync";
+const GIST_FILENAME = "my-bookmarks.json";
+let syncCfg = { token: "", gistId: "", auto: false };
+let syncPushTimer = null;
+let syncBusy = false;
+
+function loadSyncCfg() {
+  try {
+    const raw = localStorage.getItem(SYNC_KEY);
+    if (raw) {
+      const c = JSON.parse(raw);
+      syncCfg = { token: c.token || "", gistId: c.gistId || "", auto: !!c.auto };
+    }
+  } catch (e) { /* ignore */ }
+}
+
+function saveSyncCfg() {
+  try { localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg)); } catch (e) {}
+}
+
+function syncEnabled() {
+  return !!(syncCfg.token && syncCfg.gistId);
+}
+
+// Update the little badge in the header.
+function updateSyncBadge(stateLabel) {
+  const badge = document.getElementById("syncBadge");
+  if (!badge) return;
+  badge.classList.remove("is-on", "is-syncing");
+  const label = badge.querySelector(".label");
+  if (stateLabel === "syncing") {
+    badge.classList.add("is-on", "is-syncing");
+    if (label) label.textContent = "Syncing\u2026";
+  } else if (syncEnabled() && syncCfg.auto) {
+    badge.classList.add("is-on");
+    if (label) label.textContent = "Sync on";
+  } else if (syncEnabled()) {
+    if (label) label.textContent = "Sync ready";
+  } else {
+    if (label) label.textContent = "Sync off";
+  }
+}
+
+// Push current data up to the Gist.
+async function gistPush(silent) {
+  if (!syncEnabled() || syncBusy) return;
+  syncBusy = true;
+  updateSyncBadge("syncing");
+  try {
+    const payload = { app: "My Bookmarks", version: 1, tabs: state.tabs, links: state.links, contacts: state.contacts };
+    const res = await fetch("https://api.github.com/gists/" + encodeURIComponent(syncCfg.gistId), {
+      method: "PATCH",
+      headers: {
+        "Authorization": "Bearer " + syncCfg.token,
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ files: { [GIST_FILENAME]: { content: JSON.stringify(payload, null, 2) } } }),
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    if (!silent) toast("Pushed to cloud.", "success");
+  } catch (e) {
+    toast("Sync push failed: " + e.message + ". Check token/Gist ID.", "error");
+  } finally {
+    syncBusy = false;
+    updateSyncBadge();
+  }
+}
+
+// Pull data from the Gist and replace local state.
+async function gistPull(silent) {
+  if (!syncEnabled() || syncBusy) return;
+  syncBusy = true;
+  updateSyncBadge("syncing");
+  try {
+    const res = await fetch("https://api.github.com/gists/" + encodeURIComponent(syncCfg.gistId), {
+      headers: {
+        "Authorization": "Bearer " + syncCfg.token,
+        "Accept": "application/vnd.github+json",
+      },
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const gist = await res.json();
+    const file = gist.files && gist.files[GIST_FILENAME];
+    if (!file) {
+      // First-time setup: the file doesn't exist yet, so push instead.
+      syncBusy = false;
+      await gistPush(true);
+      if (!silent) toast("Initialised cloud copy.", "success");
+      return;
+    }
+    const data = JSON.parse(file.content);
+    if (!Array.isArray(data.tabs) || !Array.isArray(data.links)) throw new Error("Bad data");
+    state.tabs = data.tabs;
+    state.links = data.links;
+    state.contacts = Array.isArray(data.contacts) ? data.contacts : [];
+    if (state.ui.activeTabId !== ADMIN_TAB_ID && !getTab(state.ui.activeTabId)) {
+      state.ui.activeTabId = state.tabs[0] ? state.tabs[0].id : ADMIN_TAB_ID;
+    }
+    saveStateLocalOnly();
+    render();
+    if (!silent) toast("Pulled latest from cloud.", "success");
+  } catch (e) {
+    toast("Sync pull failed: " + e.message + ". Check token/Gist ID.", "error");
+  } finally {
+    syncBusy = false;
+    updateSyncBadge();
+  }
+}
+
+// Debounced auto-push after local edits.
+function scheduleAutoPush() {
+  if (!syncEnabled() || !syncCfg.auto) return;
+  clearTimeout(syncPushTimer);
+  syncPushTimer = setTimeout(() => gistPush(true), 1500);
+}
+
+// Settings modal for sync.
+function openSyncSettings() {
+  openModal("Cross-Device Sync", `
+    <form id="syncForm" novalidate>
+      <p class="list-item__meta" style="margin-top:0;">
+        Sync your bookmarks across devices using a <strong>private GitHub Gist</strong> as a tiny cloud store.
+        Your token is stored only on this device.
+      </p>
+
+      <div class="field">
+        <label for="syToken">GitHub token <span class="hint">(fine-grained, "Gists" permission)</span></label>
+        <input type="password" id="syToken" placeholder="github_pat_\u2026 or ghp_\u2026" autocomplete="off" value="${esc(syncCfg.token)}" />
+      </div>
+
+      <div class="field">
+        <label for="syGist">Gist ID</label>
+        <input type="text" id="syGist" placeholder="e.g. 3f8c1a9b\u2026 (from the gist URL)" autocomplete="off" value="${esc(syncCfg.gistId)}" />
+      </div>
+
+      <div class="field" style="display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" id="syAuto" style="width:auto;" ${syncCfg.auto ? "checked" : ""} />
+        <label for="syAuto" style="margin:0;">Auto-sync changes to the cloud</label>
+      </div>
+
+      <p class="note">
+        <strong>Setup:</strong> 1) Create a <span class="code-hint">secret</span> gist at gist.github.com with any content.
+        2) Copy its ID from the URL (the long code after your username).
+        3) Create a fine-grained token (Settings \u2192 Developer settings) with read/write access limited to <span class="code-hint">Gists</span>.
+        Keep the gist private; never share your token.
+      </p>
+
+      <div class="form-actions" style="justify-content:space-between;">
+        <button type="button" class="btn btn--danger" id="syDisable">Turn off</button>
+        <span style="display:flex;gap:10px;">
+          <button type="button" class="btn" id="syPull">\u2b07\ufe0f Pull now</button>
+          <button type="submit" class="btn btn--primary">\ud83d\udcbe Save &amp; Push</button>
+        </span>
+      </div>
+    </form>
+  `, (body) => {
+    const tokenInput = body.querySelector("#syToken");
+    const gistInput = body.querySelector("#syGist");
+    const autoInput = body.querySelector("#syAuto");
+
+    function commit() {
+      syncCfg.token = tokenInput.value.trim();
+      syncCfg.gistId = gistInput.value.trim();
+      syncCfg.auto = autoInput.checked;
+      saveSyncCfg();
+      updateSyncBadge();
+    }
+
+    body.querySelector("#syDisable").addEventListener("click", () => {
+      syncCfg = { token: "", gistId: "", auto: false };
+      saveSyncCfg();
+      updateSyncBadge();
+      closeModal();
+      toast("Sync turned off on this device.", "info");
+    });
+
+    body.querySelector("#syPull").addEventListener("click", () => {
+      commit();
+      if (!syncEnabled()) { toast("Enter a token and Gist ID first.", "error"); return; }
+      closeModal();
+      gistPull(false);
+    });
+
+    body.querySelector("#syncForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      commit();
+      if (!syncEnabled()) { toast("Enter a token and Gist ID first.", "error"); return; }
+      closeModal();
+      gistPush(false);
+    });
+  });
+}
+
+document.getElementById("syncBadge").addEventListener("click", openSyncSettings);
+
+// Save locally without triggering an auto-push (used after a pull).
+function saveStateLocalOnly() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      tabs: state.tabs, links: state.links, contacts: state.contacts, ui: state.ui,
+    }));
+  } catch (e) {}
+}
+
+/* ============================================================
+   TOP-LEVEL RENDER
+   ============================================================ */
+function render() {
+  renderTabbar();
+  if (state.ui.activeTabId === ADMIN_TAB_ID) {
+    renderAdminView();
+  } else {
+    renderTabView(state.ui.activeTabId);
+  }
+}
+
+
+/* ============================================================
+   BOOTSTRAP
+   ============================================================ */
+loadState();
+loadSyncCfg();
+render();
+updateSyncBadge();
+
+// If auto-sync is enabled, pull the latest from the cloud on startup
+// so this device picks up changes made elsewhere.
+if (syncEnabled() && syncCfg.auto) {
+  gistPull(true);
+}
+
+/* ============================================================
+   PWA: register the service worker for offline + installability.
+   ------------------------------------------------------------
+   Only runs over http/https (not file://). Safe no-op otherwise,
+   so opening index.html directly still works exactly as before.
+   ============================================================ */
+if ("serviceWorker" in navigator &&
+    (location.protocol === "https:" || location.protocol === "http:")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {
+      // Registration can fail on file:// or if sw.js isn't deployed yet.
+      // The app still works fully without it.
+    });
+  });
+}
+
+</script>
+</body>
+</html>
